@@ -436,7 +436,7 @@
   /* ══════════════════════════════════════
      JAVASCRIPT LOGIC
   ══════════════════════════════════════ */
-  var API    = 'https://astroved-chatbot.onrender.com';
+  var API    = 'https://astroved-chatbot-av5p.onrender.com';
   var SITE   = 'https://www.astroved.com';
   var CRM_KW = ['payment','pay','billing','bill','invoice','refund','subscription',
     'plan','price','pricing','cost','charge','cancel','complaint','support',
