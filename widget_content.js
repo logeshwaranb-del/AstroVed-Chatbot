@@ -801,7 +801,7 @@ function callAPI(txt, attempt, reqId) {
 
   /* ── Restart ── */
   function restart(){
-    sessId='av_'+Math.random().toString(36).slice(2);
+    sessId='sess_'+Math.random().toString(36).slice(2);
     uName=''; uEmail=''; uPhone='';
     msgCounter=0; lastMsgId=0;
     if(pollTimer){ clearInterval(pollTimer); pollTimer=null; }
@@ -813,6 +813,8 @@ function callAPI(txt, attempt, reqId) {
     ['av-fn','av-fe','av-fp'].forEach(function(id){ $(id).value=''; });
     stars.forEach(function(s){ s.classList.remove('av-on'); });
     $('av-rt').style.display='none';
+    answeredIds = {};        // ← add pannunga
+    isSending = false;  
   }
 
   /* ── Voice ── */
