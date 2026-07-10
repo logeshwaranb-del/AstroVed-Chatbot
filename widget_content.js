@@ -608,17 +608,26 @@ setTimeout(function(){
       ['🌙 Horoscope','📊 Birth Chart','💑 Compatibility','❤️ Love','🌿 Remedies'], null);
   }
 
-  /* ── Send Message ── */
-var answeredIds = {};   // ← top-la GLOBAL STATE section la add pannunga (msgCounter kitta)
+/* ─────────────────────────────────────
+   GLOBAL STATE — idhu add pannunga (top la irukura state block la)
+───────────────────────────────────── */
+var answeredIds = {};
+var isSending = false;   // ← double-submit lock
 
+/* ─────────────────────────────────────
+   SEND MESSAGE — replace panra full function
+───────────────────────────────────── */
 function send() {
+  if (isSending) return;              // ← already oru request pogudhu na, block pannidum
+
   var inp = document.getElementById('inp');
   var txt = inp.value.trim();
   if (!txt) return;
   inp.value = ''; inp.style.height = '';
   document.getElementById('qrs').style.display = 'none';
+
   msgCounter++;
-  var reqId = msgCounter;              // ← idhu add pannunga
+  var reqId = msgCounter;
   userMsg(txt, 'm' + msgCounter);
 
   if (CRM_KW.some(function(k){ return txt.toLowerCase().includes(k); })) {
@@ -626,15 +635,21 @@ function send() {
     setTimeout(showCRM, 800);
     return;
   }
+
+  isSending = true;                   // ← lock ON
+  document.getElementById('send-btn').disabled = true;
   showTyping();
-  callAPI(txt, 0, reqId);              // ← reqId pass pannunga
+  callAPI(txt, 0, reqId);
 }
 
-function callAPI(txt, attempt, reqId) {   // ← reqId add pannunga
+/* ─────────────────────────────────────
+   CALL API — replace panra full function
+───────────────────────────────────── */
+function callAPI(txt, attempt, reqId) {
   var controller = new AbortController();
   var timeout = setTimeout(function() {
     controller.abort();
-  }, 30000); // ← 15000 la irundhu 30000 aakkinom (Render cold start ku extra time)
+  }, 25000); // Render cold-start ku podhuma-na 25s
 
   setTimeout(function() {
     fetch(API + '/chat', {
@@ -649,8 +664,10 @@ function callAPI(txt, attempt, reqId) {   // ← reqId add pannunga
       return r.json();
     })
     .then(function(d) {
-      if (answeredIds[reqId]) return;   // ← already answered na, IGNORE
-      answeredIds[reqId] = true;        // ← mark done
+      if (answeredIds[reqId]) return;   // ← already render aagiducha na, ignore
+      answeredIds[reqId] = true;
+      isSending = false;                // ← lock OFF
+      document.getElementById('send-btn').disabled = false;
       rmTyping();
       if (d.mode === 'with_agent') { syncThenPoll(); return; }
       if (d.mode === 'handoff_triggered') {
@@ -665,13 +682,16 @@ function callAPI(txt, attempt, reqId) {   // ← reqId add pannunga
     })
     .catch(function(err) {
       clearTimeout(timeout);
-      if (answeredIds[reqId]) return;   // ← already answered na retry venaam
-      if (err.name === 'AbortError' || 
+      if (answeredIds[reqId]) return;   // ← already answered aana retry venaam
+      if (err.name === 'AbortError' ||
           err.message.includes('message channel closed') ||
           err.message.includes('listener indicated')) {
         if (attempt < 2) {
           setTimeout(function() { callAPI(txt, attempt + 1, reqId); }, 2000);
         } else {
+          answeredIds[reqId] = true;
+          isSending = false;
+          document.getElementById('send-btn').disabled = false;
           rmTyping();
           botMsg('Connection issue. Please try again! 🔄', [], null);
         }
@@ -680,12 +700,17 @@ function callAPI(txt, attempt, reqId) {   // ← reqId add pannunga
       if (attempt < 2) {
         setTimeout(function() { callAPI(txt, attempt + 1, reqId); }, 2000);
       } else {
+        answeredIds[reqId] = true;
+        isSending = false;
+        document.getElementById('send-btn').disabled = false;
         rmTyping();
         botMsg('Server is waking up… Please resend in 30 seconds! 🔄', [], null);
       }
     });
   }, 200);
 }
+
+
 
   /* ── Polling ── */
   function startPolling(){
