@@ -479,15 +479,13 @@ setTimeout(function(){
   }
   
   function getFallbackLink(txt) {
-  var t = (txt || '').toLowerCase();
-  if (t.includes('horoscope')||t.includes('moon sign')) return { label:'🌙 View Horoscope', url: SITE+'/horoscopes' };
-  // ... existing checks stay same ...
-  if (t.includes('consult'))    return { label:'🔮 Talk to Astrologer', url: SITE+'/astrovedspeaks/' };
+    var t = (txt || '').toLowerCase();
+    if (t.includes('horoscope')||t.includes('moon sign')) return { label:'🌙 View Horoscope', url: SITE+'/horoscopes' };
+    if (t.includes('consult'))    return { label:'🔮 Talk to Astrologer', url: SITE+'/astrovedspeaks/' };
+    if (t.includes('remedy')||t.includes('remedies')) return { label:'🌿 View Remedies', url: SITE+'/remedies' };
+    if (t.includes('gemstone')) return { label:'💎 Gemstones', url: SITE+'/gemstones' };
 
-  // NEW — last-resort catch-all so a link is ALWAYS shown for real questions
-  if (t.trim().split(' ').length > 3) {
-    return { label:'✨ Explore All Services', url: SITE+'/astrology-services' };
-  }
+  // catch-all remove panniten — relevant topic illana, link kaamikadhu
   return null;
 }
 
