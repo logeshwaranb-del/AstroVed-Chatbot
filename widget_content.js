@@ -611,42 +611,82 @@ setTimeout(function(){
   }
 
   /* ── Send Message ── */
-  function send(){
-    var inp=$('av-inp');
-    var txt=inp.value.trim();
-    if(!txt) return;
-    inp.value=''; inp.style.height='';
-    userMsg(txt);
-    if(CRM_KW.some(function(k){ return txt.toLowerCase().includes(k); })){
-      botMsg('Let me connect you with our specialist team right away!', [], null);
-      setTimeout(showCRM, 800); return;
-    }
-    showTyping();
-    callAPI(txt, 0);
+var answeredIds = {};   // ← top-la GLOBAL STATE section la add pannunga (msgCounter kitta)
+
+function send() {
+  var inp = document.getElementById('inp');
+  var txt = inp.value.trim();
+  if (!txt) return;
+  inp.value = ''; inp.style.height = '';
+  document.getElementById('qrs').style.display = 'none';
+  msgCounter++;
+  var reqId = msgCounter;              // ← idhu add pannunga
+  userMsg(txt, 'm' + msgCounter);
+
+  if (CRM_KW.some(function(k){ return txt.toLowerCase().includes(k); })) {
+    botMsg('Let me connect you with our specialist team right away!', [], null);
+    setTimeout(showCRM, 800);
+    return;
   }
+  showTyping();
+  callAPI(txt, 0, reqId);              // ← reqId pass pannunga
+}
 
-  function callAPI(txt, attempt){
-    setTimeout(function(){
-      fetch(API+'/chat',{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({session_id:sessId, message:txt})
-})
-  .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-    .then(function(d){
+function callAPI(txt, attempt, reqId) {   // ← reqId add pannunga
+  var controller = new AbortController();
+  var timeout = setTimeout(function() {
+    controller.abort();
+  }, 30000); // ← 15000 la irundhu 30000 aakkinom (Render cold start ku extra time)
+
+  setTimeout(function() {
+    fetch(API + '/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({ session_id: sessId, message: txt })
+    })
+    .then(function(r) {
+      clearTimeout(timeout);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(d) {
+      if (answeredIds[reqId]) return;   // ← already answered na, IGNORE
+      answeredIds[reqId] = true;        // ← mark done
       rmTyping();
-      if(d.mode==='with_agent'){ syncThenPoll(); return; }
-      if(d.mode==='handoff_triggered'){ botMsg(d.reply,[],null); syncThenPoll(); return; }
-      var link=(d.topic_url&&d.topic_label)
-      ? {url:d.topic_url, label:d.topic_label}
-      : getFallbackLink(txt);
-      botMsg(d.reply||'Please try again.', [], link);
-})
-  .catch(function(){
-    if(attempt<2){ setTimeout(function(){ callAPI(txt, attempt+1); }, 2000); }
-    else{ rmTyping(); botMsg('Server is waking up… Please resend in 30 seconds! 🔄',[],null); }
-});
-}, 200);
-
+      if (d.mode === 'with_agent') { syncThenPoll(); return; }
+      if (d.mode === 'handoff_triggered') {
+        botMsg(d.reply, [], null);
+        syncThenPoll();
+        return;
+      }
+      var link = (d.topic_url && d.topic_label)
+        ? { url: d.topic_url, label: d.topic_label }
+        : getFallbackLink(txt);
+      botMsg(d.reply || 'Please try again.', [], link);
+    })
+    .catch(function(err) {
+      clearTimeout(timeout);
+      if (answeredIds[reqId]) return;   // ← already answered na retry venaam
+      if (err.name === 'AbortError' || 
+          err.message.includes('message channel closed') ||
+          err.message.includes('listener indicated')) {
+        if (attempt < 2) {
+          setTimeout(function() { callAPI(txt, attempt + 1, reqId); }, 2000);
+        } else {
+          rmTyping();
+          botMsg('Connection issue. Please try again! 🔄', [], null);
+        }
+        return;
+      }
+      if (attempt < 2) {
+        setTimeout(function() { callAPI(txt, attempt + 1, reqId); }, 2000);
+      } else {
+        rmTyping();
+        botMsg('Server is waking up… Please resend in 30 seconds! 🔄', [], null);
+      }
+    });
+  }, 200);
 }
 
   /* ── Polling ── */
