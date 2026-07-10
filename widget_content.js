@@ -630,23 +630,24 @@ setTimeout(function(){
       fetch(API+'/chat',{
         method:'POST', headers:{'Content-Type':'application/json'},
         body:JSON.stringify({session_id:sessId, message:txt})
-      })
-      .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-      .then(function(d){
-        rmTyping();
-        if(d.mode==='with_agent'){ syncThenPoll(); return; }
-        if(d.mode==='handoff_triggered'){ botMsg(d.reply,[],null); syncThenPoll(); return; }
-        var link=(d.topic_url&&d.topic_label)
-          ? {url:d.topic_url, label:d.topic_label}
-          : getFallbackLink(txt);
-        botMsg(d.reply||'Please try again.', [], link);
-      })
-      .catch(function(){
-        if(attempt<2){ setTimeout(function(){ callAPI(txt, attempt+1); }, 2000); }
-        else{ rmTyping(); botMsg('Server is waking up… Please resend in 30 seconds! 🔄',[],null); }
-      });
-    }, 200);
-  }
+})
+  .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(d){
+      rmTyping();
+      if(d.mode==='with_agent'){ syncThenPoll(); return; }
+      if(d.mode==='handoff_triggered'){ botMsg(d.reply,[],null); syncThenPoll(); return; }
+      var link=(d.topic_url&&d.topic_label)
+      ? {url:d.topic_url, label:d.topic_label}
+      : getFallbackLink(txt);
+      botMsg(d.reply||'Please try again.', [], link);
+})
+  .catch(function(){
+    if(attempt<2){ setTimeout(function(){ callAPI(txt, attempt+1); }, 2000); }
+    else{ rmTyping(); botMsg('Server is waking up… Please resend in 30 seconds! 🔄',[],null); }
+});
+}, 200);
+
+}
 
   /* ── Polling ── */
   function startPolling(){
