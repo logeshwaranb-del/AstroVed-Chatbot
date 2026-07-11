@@ -484,22 +484,10 @@ setTimeout(function(){
     if (t.includes('consult'))    return { label:'🔮 Talk to Astrologer', url: SITE+'/astrovedspeaks/' };
     if (t.includes('remedy')||t.includes('remedies')) return { label:'🌿 View Remedies', url: SITE+'/remedies' };
     if (t.includes('gemstone')) return { label:'💎 Gemstones', url: SITE+'/gemstones' };
-    if (t.includes('product')||t.includes('yantra')||t.includes('statue')||
-        t.includes('mala')||t.includes('incense')||t.includes('bead')||
-        t.includes('wicks')||t.includes('erukku')||t.includes('shop')||
-        t.includes('buy')||t.includes('purchase'))
-      return { label:'🛍️ All Products', url: SITE+'/products' };
-    if (t.includes('nadi')||t.includes('astrology')||t.includes('birth chart')||
-        t.includes('kundli')||t.includes('natal'))
-      return { label:'📊 Nadi Astrology', url: SITE+'/nadi-astrology' };
-    if (t.includes('puja')||t.includes('pooja')||t.includes('homa')||t.includes('yagam'))
-      return { label:'🕯️ Pujas & Homas', url: SITE+'/pujas' };
-    if (t.includes('money')||t.includes('wealth')||t.includes('finance')||t.includes('financial'))
-      return { label:'💰 Wealth & Finance', url: SITE+'/wealth-and-finance' };
-    if (t.includes('love')||t.includes('relationship')||t.includes('marriage')||t.includes('compatibility'))
-      return { label:'❤️ Love & Marriage', url: SITE+'/love-compatibility' };
-    return null;
-  }
+
+  // catch-all remove panniten — relevant topic illana, link kaamikadhu
+  return null;
+}
 
   /* ── Bot Message ── */
   function botMsg(txt, opts, link){
@@ -629,15 +617,13 @@ var isSending = false;   // ← double-submit lock
 /* ─────────────────────────────────────
    SEND MESSAGE — replace panra full function
 ───────────────────────────────────── */
+// ✅ CORRECT — இப்படி மாத்துங்க
 function send() {
   if (isSending) return;
-
-  var inp = $('av-inp');
+  var inp = $('av-inp');                          // ✅ correct ID
   if (!inp) return;
   var txt = inp.value.trim();
   if (!txt) return;
-  inp.value = ''; inp.style.height = '';
-
   msgCounter++;
   var reqId = msgCounter;
   userMsg(txt);
@@ -649,11 +635,10 @@ function send() {
   }
 
   isSending = true;
-  $('av-send-btn').disabled = true;
+  $('av-send-btn').disabled = true;              // ✅ correct ID
   showTyping();
   callAPI(txt, 0, reqId);
 }
-
 /* ─────────────────────────────────────
    CALL API — replace panra full function
 ───────────────────────────────────── */
@@ -676,9 +661,9 @@ function callAPI(txt, attempt, reqId) {
       return r.json();
     })
     .then(function(d) {
-      if (answeredIds[reqId]) return;   // ← already render aagiducha na, ignore
+      if  (answeredIds[reqId]) return;   // ← already render aagiducha na, ignore
       answeredIds[reqId] = true;
-      isSending = false;
+      isSending = false;                // ← lock OFF
       $('av-send-btn').disabled = false;
       rmTyping();
       if (d.mode === 'with_agent') { syncThenPoll(); return; }
@@ -714,7 +699,7 @@ function callAPI(txt, attempt, reqId) {
       } else {
         answeredIds[reqId] = true;
         isSending = false;
-        $('av-send-btn').disabled = false;
+        $('send-btn').disabled = false;
         rmTyping();
         botMsg('Server is waking up… Please resend in 30 seconds! 🔄', [], null);
       }
@@ -725,22 +710,16 @@ function callAPI(txt, attempt, reqId) {
 
 
   /* ── Polling ── */
-  /* NOTE: Polling is ONLY for agent messages (with_agent mode).
-     Bot replies are already rendered directly by callAPI() success handler.
-     Rendering assistant role here again causes duplicate messages — so we
-     only render when status === 'with_agent' to avoid double-display. */
   function startPolling(){
     if(pollTimer) return;
     pollTimer=setInterval(function(){
       fetch(API+'/poll/'+sessId+'?since_id='+lastMsgId)
         .then(function(r){ return r.json(); })
         .then(function(d){
-          var isAgentMode = (d.status === 'with_agent');
+          var agentMode = (d.status === 'with_agent');
           d.messages.forEach(function(m){
             lastMsgId=Math.max(lastMsgId,m.id);
-            // Only render assistant messages from polling when a live agent
-            // is responding — bot replies are already shown via callAPI().
-            if(isAgentMode && m.role==='assistant') botMsg(m.content,[],null);
+            if(agentMode && m.role==='assistant') botMsg(...)
             else if(m.role==='system') botMsg('🔔 '+m.content,[],null);
           });
           if(d.status==='closed'||d.status==='bot'){ clearInterval(pollTimer); pollTimer=null; }
