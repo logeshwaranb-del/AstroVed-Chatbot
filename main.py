@@ -300,8 +300,17 @@ def create_or_update_handoff(session_id, name, email, phone, issue_type, priorit
             (session_id, name, email, phone, issue_type, priority))
     conn.commit(); conn.close()
 
+# In-memory lock: prevents duplicate responses when frontend retries
+_chat_in_progress: dict = {}
+
 @app.post("/chat")
 async def chat(req: ChatRequest):
+    # DUPLICATE GUARD: if same session is already processing a message, block it
+    lock_key = f"{req.session_id}:{req.message.strip()}"
+    if _chat_in_progress.get(lock_key):
+        print(f"[DUPLICATE BLOCKED] session={req.session_id} msg={req.message[:40]}")
+        return {"reply": None, "mode": "duplicate_blocked", "topic_url": None, "topic_label": None}
+    _chat_in_progress[lock_key] = True
     try:
         conn = sqlite3.connect("chat.db")
         row = conn.execute("SELECT status FROM agent_sessions WHERE session_id=?", (req.session_id,)).fetchone()
@@ -353,8 +362,6 @@ async def chat(req: ChatRequest):
                 topic_url = kb_matches[0]["url"]
                 topic_label = kb_matches[0]["title"]
 
-        # ↓ this line must sit at the SAME indent level as the if/else above (8 spaces),
-        # not nested inside either branch — that's almost certainly what went wrong.
         messages = [{"role": "system", "content": system_content}]
         for h in history:
             if h["role"] in ("user", "assistant"):
@@ -368,16 +375,15 @@ async def chat(req: ChatRequest):
             temperature=0.45,
             top_p=0.9,
         )
-        
-        
-        
-        
+
         reply = response.choices[0].message.content
         save_message(req.session_id, "assistant", reply)
         return {"reply": reply, "mode": "bot", "topic_url": topic_url, "topic_label": topic_label}
     except Exception as e:
         print(f"ERROR in /chat: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
+    finally:
+        _chat_in_progress.pop(lock_key, None)  # always release the lock
 
 @app.get("/poll/{session_id}")
 async def poll_session(session_id: str, since_id: int = 0):
