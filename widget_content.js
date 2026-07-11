@@ -617,14 +617,15 @@ var isSending = false;   // ← double-submit lock
 /* ─────────────────────────────────────
    SEND MESSAGE — replace panra full function
 ───────────────────────────────────── */
+// ✅ CORRECT — இப்படி மாத்துங்க
 function send() {
-  if (isSending) return;              // ← already oru request pogudhu na, block pannidum
+  if (isSending) return;
 
-  var inp = document.getElementById('inp');
+  var inp = $('av-inp');                          // ✅ correct ID
+  if (!inp) return;
   var txt = inp.value.trim();
   if (!txt) return;
   inp.value = ''; inp.style.height = '';
-  document.getElementById('qrs').style.display = 'none';
 
   msgCounter++;
   var reqId = msgCounter;
@@ -636,12 +637,11 @@ function send() {
     return;
   }
 
-  isSending = true;                   // ← lock ON
-  document.getElementById('send-btn').disabled = true;
+  isSending = true;
+  $('av-send-btn').disabled = true;              // ✅ correct ID
   showTyping();
   callAPI(txt, 0, reqId);
 }
-
 /* ─────────────────────────────────────
    CALL API — replace panra full function
 ───────────────────────────────────── */
@@ -667,7 +667,7 @@ function callAPI(txt, attempt, reqId) {
       if (answeredIds[reqId]) return;   // ← already render aagiducha na, ignore
       answeredIds[reqId] = true;
       isSending = false;                // ← lock OFF
-      document.getElementById('send-btn').disabled = false;
+      $('av-send-btn').disabled = false;
       rmTyping();
       if (d.mode === 'with_agent') { syncThenPoll(); return; }
       if (d.mode === 'handoff_triggered') {
@@ -691,7 +691,7 @@ function callAPI(txt, attempt, reqId) {
         } else {
           answeredIds[reqId] = true;
           isSending = false;
-          document.getElementById('send-btn').disabled = false;
+          $('av-send-btn').disabled = false;
           rmTyping();
           botMsg('Connection issue. Please try again! 🔄', [], null);
         }
