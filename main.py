@@ -371,7 +371,7 @@ async def chat(req: ChatRequest):
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=messages,
-            max_tokens=450,
+            max_tokens=250,
             temperature=0.45,
             top_p=0.9,
         )
