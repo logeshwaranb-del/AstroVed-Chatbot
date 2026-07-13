@@ -719,8 +719,8 @@ function callAPI(txt, attempt, reqId) {
           var agentMode = (d.status === 'with_agent');
           d.messages.forEach(function(m){
             lastMsgId=Math.max(lastMsgId,m.id);
-            if(agentMode && m.role==='assistant') botMsg(...)
-            else if(m.role==='system') botMsg('🔔 '+m.content,[],null);
+            if(agentMode && m.role==='assistant') botMsg(m.content, [], null);
+            else if(m.role==='system') botMsg('🔔 '+m.content, [], null);
           });
           if(d.status==='closed'||d.status==='bot'){ clearInterval(pollTimer); pollTimer=null; }
         }).catch(function(){});
